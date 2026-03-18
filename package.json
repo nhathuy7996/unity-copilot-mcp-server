@@ -1,0 +1,93 @@
+{
+  "name": "unity-copilot",
+  "displayName": "Unity Copilot Bridge",
+  "description": "Allows GitHub Copilot Chat to control Unity Editor — create prefabs, scenes, GameObjects, components, and scripts via natural language.",
+  "version": "0.1.0",
+  "publisher": "your-publisher-id",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": ["AI", "Other"],
+  "keywords": ["unity", "copilot", "gamedev", "prefab", "scene"],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "icon": "images/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/unity-copilot"
+  },
+  "contributes": {
+    "chatParticipants": [
+      {
+        "id": "unity-copilot.unity",
+        "fullName": "Unity Editor",
+        "name": "unity",
+        "description": "Controls Unity Editor: create prefabs, scenes, GameObjects, scripts, and components.",
+        "isSticky": true,
+        "commands": [
+          {
+            "name": "status",
+            "description": "Check connection status with Unity Editor"
+          },
+          {
+            "name": "help",
+            "description": "Show available commands and examples"
+          }
+        ]
+      }
+    ],
+    "commands": [
+      {
+        "command": "unity-copilot.installBridge",
+        "title": "Unity Copilot: Install Bridge into Unity Project",
+        "category": "Unity Copilot"
+      },
+      {
+        "command": "unity-copilot.connect",
+        "title": "Unity Copilot: Connect to Unity Editor",
+        "category": "Unity Copilot"
+      },
+      {
+        "command": "unity-copilot.disconnect",
+        "title": "Unity Copilot: Disconnect from Unity Editor",
+        "category": "Unity Copilot"
+      }
+    ],
+    "configuration": {
+      "title": "Unity Copilot",
+      "properties": {
+        "unity-copilot.bridgePort": {
+          "type": "number",
+          "default": 6400,
+          "description": "Port number for the Unity Editor WebSocket bridge server."
+        },
+        "unity-copilot.autoConnect": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically attempt to connect to Unity Editor on activation."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "package": "vsce package",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.90.0",
+    "@types/ws": "^8.5.10",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "@vscode/vsce": "^2.24.0",
+    "esbuild": "^0.20.0",
+    "eslint": "^8.57.0",
+    "typescript": "^5.4.0"
+  },
+  "dependencies": {
+    "ws": "^8.17.0"
+  }
+}

@@ -1,0 +1,45 @@
+# Node
+node_modules/
+.npm/
+
+# Build outputs
+dist/
+build/
+*.log
+*.tsbuildinfo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# VSCode
+.vscode/
+.env
+.env.*
+
+# Unity Bridge (C#)
+*.user
+*.suo
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+*.unityproj
+*.sln
+*.csproj
+*.tmp
+*.bak
+*.swp
+*.lock
+*.obj
+*.exe
+*.dll
+*.apk
+*.unitypackage
+
+# Misc
+.idea/

@@ -1,0 +1,12 @@
+node_modules/
+.vscode-test/
+src/
+tsconfig.json
+esbuild.js
+.eslintrc.json
+**/*.ts
+**/*.map
+!dist/**
+# unity-bridge/ and unity-mcp.js are intentionally INCLUDED in the VSIX
+# unity-bridge/ → copied into Unity project by installBridge command
+# unity-mcp.js  → MCP server referenced by context.extensionPath at runtime
