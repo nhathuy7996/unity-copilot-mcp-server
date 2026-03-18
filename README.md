@@ -10,7 +10,9 @@
 ## Cách sử dụng
 
 1. **Cài đặt extension** trong VS Code và mở workspace Unity của bạn.
-2. **Mở Unity Editor** và đảm bảo đã import `unity-bridge/UnityBridgeServer.cs` vào thư mục `Assets/Editor/UnityBridge/`.
+2. **Chạy lệnh cài đặt bridge:**
+   - Nhấn `Cmd+Shift+P` (hoặc `Ctrl+Shift+P` trên Windows/Linux), gõ `Install Unity Copilot Bridge` và chọn lệnh này.
+   - Extension sẽ tự động copy script Unity bridge vào đúng thư mục `Assets/Editor/UnityBridge/` trong project của bạn.
 3. **Kết nối:**
    - Nhấn vào status bar "Unity Copilot Bridge" hoặc dùng lệnh `Unity Copilot: Connect`.
    - Đảm bảo Unity Editor đang chạy và lắng nghe cổng `6400` (có thể đổi trong settings).
