@@ -1,3 +1,8 @@
+
+<p align="center">
+   <img src="images/banner.png" alt="Unity MCP Server Banner" />
+</p>
+
 # Unity Copilot for Unity Editor
 
 > Điều khiển Unity Editor bằng ngôn ngữ tự nhiên qua VS Code và GitHub Copilot Chat.

@@ -2,8 +2,8 @@
   "name": "unity-copilot-mcp-server",
   "displayName": "Unity Copilot MCP Server",
   "description": "Allows GitHub Copilot Chat to control Unity Editor — create prefabs, scenes, GameObjects, components, and scripts via natural language.",
-  "version": "0.1.0",
-  "publisher": "nhathuy7996",
+  "version": "0.1.1",
+  "publisher": "gamedevtoi",
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -14,7 +14,7 @@
   "icon": "images/icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-username/unity-copilot"
+    "url": "https://github.com/nhathuy7996/unity-copilot-mcp-server"
   },
   "contributes": {
     "chatParticipants": [
