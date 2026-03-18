@@ -3,43 +3,46 @@
    <img src="images/banner.png" alt="Unity MCP Server Banner" />
 </p>
 
+
 # Unity Copilot for Unity Editor
 
-> Điều khiển Unity Editor bằng ngôn ngữ tự nhiên qua VS Code và GitHub Copilot Chat.
+> Control Unity Editor with natural language via VS Code and GitHub Copilot Chat.
 
-## Cách sử dụng
+## Usage
 
-1. **Cài đặt extension** trong VS Code và mở workspace Unity của bạn.
-2. **Chạy lệnh cài đặt bridge:**
-   - Nhấn `Cmd+Shift+P` (hoặc `Ctrl+Shift+P` trên Windows/Linux), gõ `Install Unity Copilot Bridge` và chọn lệnh này.
-   - Extension sẽ tự động copy script Unity bridge vào đúng thư mục `Assets/Editor/UnityBridge/` trong project của bạn.
-3. **Kết nối:**
-   - Nhấn vào status bar "Unity Copilot Bridge" hoặc dùng lệnh `Unity Copilot: Connect`.
-   - Đảm bảo Unity Editor đang chạy và lắng nghe cổng `6400` (có thể đổi trong settings).
-4. **Chat với @unity** trong Copilot Chat để ra lệnh cho Unity:
-   - Ví dụ: `Tạo một prefab Enemy có Rigidbody và BoxCollider`
-   - Ví dụ: `Thêm component Light vào GameObject MainCamera`
+1. **Install the extension** in VS Code and open your Unity workspace.
+2. **Run the bridge install command:**
+   - Press `Cmd+Shift+P` (or `Ctrl+Shift+P` on Windows/Linux), type `Unity Copilot: Install Unity Copilot Bridge` and select it.
+   - The extension will automatically copy the Unity bridge script to `Assets/Editor/UnityBridge/` in your project.
+3. **Connect:**
+   - Click the "Unity Copilot Bridge" status bar item or run the command `Unity Copilot: Connect`.
+   - Make sure Unity Editor is running and listening on port `6400` (can be changed in settings).
+4. **Chat with @unity** in Copilot Chat to control Unity:
+   - Example: `Create a prefab Enemy with Rigidbody and BoxCollider`
+   - Example: `Add Light component to GameObject MainCamera`
 
-## Các lệnh hỗ trợ
+## Supported Commands
 
-| Lệnh              | Mô tả |
-|-------------------|-------------------------------------------------------------|
-| createPrefab      | Tạo prefab mới từ GameObject hoặc model 3D                  |
-| createScene       | Tạo scene mới và lưu vào project                            |
-| createGameObject  | Thêm GameObject (primitive hoặc empty) vào scene            |
-| addComponent      | Gắn component vào GameObject hiện có                        |
-| createScript      | Sinh script C# từ template và gắn vào GameObject (nếu muốn) |
-| setProperty       | Đổi vị trí, xoay, scale, đổi tên, bật/tắt GameObject        |
-| openScene         | Mở scene theo tên hoặc đường dẫn                            |
-| getSceneHierarchy | Liệt kê các GameObject gốc trong scene hiện tại             |
-| listAssets        | Liệt kê asset trong thư mục, lọc theo loại                  |
+| Command            | Description                                                |
+|--------------------|-----------------------------------------------------------|
+| createPrefab       | Create a new prefab from a GameObject or 3D model         |
+| createScene        | Create and save a new scene                               |
+| createGameObject   | Add a primitive or empty GameObject to the scene          |
+| addComponent       | Attach a component to an existing GameObject              |
+| createScript       | Generate a C# script from a template and (optionally) attach it |
+| setProperty        | Move, rotate, scale, rename, or toggle GameObject state   |
+| openScene          | Open a scene by name or path                              |
+| getSceneHierarchy  | List all root GameObjects in the current scene            |
+| listAssets         | List assets in a folder, filter by type                   |
 
-## Cài đặt
+## Settings
 
-- `unity-copilot.bridgePort` (mặc định: 6400): Cổng WebSocket kết nối tới Unity
-- `unity-copilot.autoConnect` (mặc định: true): Tự động kết nối khi mở extension
+| Setting                     | Default | Description                                 |
+|-----------------------------|---------|---------------------------------------------|
+| `unity-copilot.bridgePort`  | `6400`  | WebSocket port the Unity bridge listens on   |
+| `unity-copilot.autoConnect` | `true`  | Auto-connect when the extension activates    |
 
-## Yêu cầu
+## Requirements
 
 - VS Code 1.90+
 - GitHub Copilot extension
