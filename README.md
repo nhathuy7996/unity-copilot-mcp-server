@@ -1,40 +1,42 @@
-# Unity Copilot Bridge
+# Unity Copilot for Unity Editor
 
-A VS Code extension that connects GitHub Copilot Chat to Unity Editor, enabling you to create prefabs, scenes, GameObjects, scripts, and components using natural language.
+> Điều khiển Unity Editor bằng ngôn ngữ tự nhiên qua VS Code và GitHub Copilot Chat.
 
-# unity-copilot
+## Cách sử dụng
 
-A VS Code extension and Unity bridge for integrating AI-powered workflows with Unity projects.
+1. **Cài đặt extension** trong VS Code và mở workspace Unity của bạn.
+2. **Mở Unity Editor** và đảm bảo đã import `unity-bridge/UnityBridgeServer.cs` vào thư mục `Assets/Editor/UnityBridge/`.
+3. **Kết nối:**
+   - Nhấn vào status bar "Unity Copilot Bridge" hoặc dùng lệnh `Unity Copilot: Connect`.
+   - Đảm bảo Unity Editor đang chạy và lắng nghe cổng `6400` (có thể đổi trong settings).
+4. **Chat với @unity** trong Copilot Chat để ra lệnh cho Unity:
+   - Ví dụ: `Tạo một prefab Enemy có Rigidbody và BoxCollider`
+   - Ví dụ: `Thêm component Light vào GameObject MainCamera`
 
-## Features
-- Chat with AI to assist Unity development
-- Send commands from VS Code to Unity
-- Unity bridge server in C# for communication
+## Các lệnh hỗ trợ
 
-## Project Structure
-- `src/` — TypeScript source for the VS Code extension
-- `unity-bridge/` — C# server for Unity integration
-- `images/` — Extension and documentation images
-- `build-rpg.js`, `esbuild.js` — Build scripts
+| Lệnh              | Mô tả |
+|-------------------|-------------------------------------------------------------|
+| createPrefab      | Tạo prefab mới từ GameObject hoặc model 3D                  |
+| createScene       | Tạo scene mới và lưu vào project                            |
+| createGameObject  | Thêm GameObject (primitive hoặc empty) vào scene            |
+| addComponent      | Gắn component vào GameObject hiện có                        |
+| createScript      | Sinh script C# từ template và gắn vào GameObject (nếu muốn) |
+| setProperty       | Đổi vị trí, xoay, scale, đổi tên, bật/tắt GameObject        |
+| openScene         | Mở scene theo tên hoặc đường dẫn                            |
+| getSceneHierarchy | Liệt kê các GameObject gốc trong scene hiện tại             |
+| listAssets        | Liệt kê asset trong thư mục, lọc theo loại                  |
 
-## Getting Started
-1. **Install dependencies:**
-     ```sh
-     npm install
-     ```
-2. **Build the extension:**
-     ```sh
-     npm run build
-     ```
-3. **Start the Unity bridge server:**
-     - Open `unity-bridge/UnityBridgeServer.cs` in Unity or build/run as a standalone server.
+## Cài đặt
 
-## Development
-- Use `npm run watch` for live TypeScript compilation.
-- Edit C# files in `unity-bridge/` for Unity-side logic.
+- `unity-copilot.bridgePort` (mặc định: 6400): Cổng WebSocket kết nối tới Unity
+- `unity-copilot.autoConnect` (mặc định: true): Tự động kết nối khi mở extension
 
-## Contributing
-Pull requests and issues are welcome!
+## Yêu cầu
+
+- VS Code 1.90+
+- GitHub Copilot extension
+- Unity 2022.3+ (LTS)
 
 ## License
 MIT
@@ -66,13 +68,6 @@ VS Code (@unity chat)
                  └─ UnityCommandHandler.cs (main thread via EditorApplication.update)
                       └─ UnityEditor API  (PrefabUtility, EditorSceneManager, …)
 ```
-
-## Publishing
-
-1. Create a publisher at [marketplace.visualstudio.com](https://marketplace.visualstudio.com)
-2. Update `"publisher"` in `package.json`
-3. Run `npm run package` → produces a `.vsix` file
-4. Upload to the marketplace or share the `.vsix` directly
 
 ## Requirements
 

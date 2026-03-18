@@ -1,9 +1,9 @@
 {
-  "name": "unity-copilot",
-  "displayName": "Unity Copilot Bridge",
+  "name": "unity-copilot-mcp-server",
+  "displayName": "Unity Copilot MCP Server",
   "description": "Allows GitHub Copilot Chat to control Unity Editor — create prefabs, scenes, GameObjects, components, and scripts via natural language.",
   "version": "0.1.0",
-  "publisher": "your-publisher-id",
+  "publisher": "nhathuy7996",
   "engines": {
     "vscode": "^1.90.0"
   },
