@@ -7,6 +7,7 @@ export type ActionName =
   | 'addComponent'
   | 'createGameObject'
   | 'setProperty'
+  | 'createScript'
   | 'openScene'
   | 'instantiatePrefab'
   | 'getSceneHierarchy'

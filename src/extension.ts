@@ -10,14 +10,14 @@ let statusBarItem: vscode.StatusBarItem | null = null;
 export function activate(context: vscode.ExtensionContext): void {
   // ── Status bar item ────────────────────────────────────────────
   statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-  statusBarItem.command = 'unity-copilot.connect';
-  statusBarItem.tooltip = 'Unity Copilot Bridge status. Click to connect.';
+  statusBarItem.command = 'gdt-unity-mcp.connect';
+  statusBarItem.tooltip = 'Unity MCP Bridge status. Click to connect.';
   updateStatusBar('disconnected');
   statusBarItem.show();
   context.subscriptions.push(statusBarItem);
 
   // ── Create WebSocket client ────────────────────────────────────
-  const port = vscode.workspace.getConfiguration('unity-copilot').get<number>('bridgePort', 6400);
+  const port = vscode.workspace.getConfiguration('gdt-unity-mcp').get<number>('bridgePort', 6400);
   client = new UnityClient(port, (state: ConnectionState) => {
     updateStatusBar(state);
     if (state === 'connected') {
@@ -30,23 +30,23 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // ── Register commands ──────────────────────────────────────────
   context.subscriptions.push(
-    vscode.commands.registerCommand('unity-copilot.connect', () => {
+    vscode.commands.registerCommand('gdt-unity-mcp.connect', () => {
       client!.connect();
-      void vscode.window.showInformationMessage('Unity Copilot: Connecting to Unity Editor...');
+      void vscode.window.showInformationMessage('Unity MCP: Connecting to Unity Editor...');
     }),
 
-    vscode.commands.registerCommand('unity-copilot.disconnect', () => {
+    vscode.commands.registerCommand('gdt-unity-mcp.disconnect', () => {
       client!.disconnect();
-      void vscode.window.showInformationMessage('Unity Copilot: Disconnected from Unity Editor.');
+      void vscode.window.showInformationMessage('Unity MCP: Disconnected from Unity Editor.');
     }),
 
-    vscode.commands.registerCommand('unity-copilot.installBridge', async () => {
+    vscode.commands.registerCommand('gdt-unity-mcp.installBridge', async () => {
       await installBridge(context);
     }),
   );
 
   // ── Auto-connect if configured ─────────────────────────────────
-  const autoConnect = vscode.workspace.getConfiguration('unity-copilot').get<boolean>('autoConnect', true);
+  const autoConnect = vscode.workspace.getConfiguration('gdt-unity-mcp').get<boolean>('autoConnect', true);
   if (autoConnect) {
     client.connect();
   }
@@ -64,26 +64,26 @@ function updateStatusBar(state: ConnectionState): void {
     case 'connected':
       statusBarItem.text = '$(pass-filled) Unity';
       statusBarItem.backgroundColor = undefined;
-      statusBarItem.tooltip = 'Unity Copilot: Connected. Click to disconnect.';
-      statusBarItem.command = 'unity-copilot.disconnect';
+      statusBarItem.tooltip = 'Unity MCP: Connected. Click to disconnect.';
+      statusBarItem.command = 'gdt-unity-mcp.disconnect';
       break;
     case 'connecting':
       statusBarItem.text = '$(sync~spin) Unity';
       statusBarItem.backgroundColor = undefined;
-      statusBarItem.tooltip = 'Unity Copilot: Connecting...';
+      statusBarItem.tooltip = 'Unity MCP: Connecting...';
       statusBarItem.command = undefined;
       break;
     case 'error':
       statusBarItem.text = '$(error) Unity';
       statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
-      statusBarItem.tooltip = 'Unity Copilot: Connection error. Click to retry.';
-      statusBarItem.command = 'unity-copilot.connect';
+      statusBarItem.tooltip = 'Unity MCP: Connection error. Click to retry.';
+      statusBarItem.command = 'gdt-unity-mcp.connect';
       break;
     default: // disconnected
       statusBarItem.text = '$(circle-slash) Unity';
       statusBarItem.backgroundColor = undefined;
-      statusBarItem.tooltip = 'Unity Copilot: Disconnected. Click to connect.';
-      statusBarItem.command = 'unity-copilot.connect';
+      statusBarItem.tooltip = 'Unity MCP: Disconnected. Click to connect.';
+      statusBarItem.command = 'gdt-unity-mcp.connect';
   }
 }
 
@@ -154,7 +154,7 @@ async function copyBridgeFiles(context: vscode.ExtensionContext, unityRoot: stri
                  : ' (Could not write .vscode/mcp.json — check permissions.)';
 
   const result = await vscode.window.showInformationMessage(
-    `Unity Copilot: Bridge installed at Assets/Editor/UnityBridge/ (${fileList}).${mcpNote}\n\nSwitch to Unity — it will recompile scripts automatically. The bridge starts listening on port ${client ? (vscode.workspace.getConfiguration('unity-copilot').get<number>('bridgePort', 6400)) : 6400} when Unity is in Editor mode.`,
+    `Unity MCP: Bridge installed at Assets/Editor/UnityBridge/ (${fileList}).${mcpNote}\n\nSwitch to Unity — it will recompile scripts automatically. The bridge starts listening on port ${client ? (vscode.workspace.getConfiguration('gdt-unity-mcp').get<number>('bridgePort', 6400)) : 6400} when Unity is in Editor mode.`,
     'Connect Now',
   );
 

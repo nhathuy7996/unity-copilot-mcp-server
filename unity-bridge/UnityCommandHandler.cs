@@ -52,6 +52,9 @@ namespace UnityCopilot
                     case "setProperty":
                         message = SetProperty(p);
                         break;
+                    case "createScript":
+                        message = CreateScript(p, out data);
+                        break;
                     case "openScene":
                         message = OpenScene(p);
                         break;
@@ -321,6 +324,99 @@ namespace UnityCopilot
 
             EditorUtility.SetDirty(go);
             return $"Updated '{goName}': {string.Join(", ", changed)}.";
+        }
+
+        // ── 6. createScript ────────────────────────────────────────────
+        private static string CreateScript(SimpleJson p, out object data)
+        {
+            string scriptName = p.GetString("scriptName");
+            if (string.IsNullOrEmpty(scriptName)) { throw new ArgumentException("'scriptName' is required for createScript"); }
+
+            string template  = p.GetString("template") ?? "MonoBehaviour";
+            string savePath  = p.GetString("savePath") ?? "Scripts";
+            string attachTo  = p.GetString("attachTo");
+
+            EnsureAssetsFolder(savePath);
+            string filePath = $"Assets/{savePath}/{scriptName}.cs";
+            string fullPath = Path.Combine(Application.dataPath, savePath, $"{scriptName}.cs");
+
+            if (File.Exists(fullPath)) { throw new InvalidOperationException($"Script '{scriptName}.cs' already exists at '{filePath}'."); }
+
+            string body = BuildScriptTemplate(scriptName, template);
+            File.WriteAllText(fullPath, body, Encoding.UTF8);
+
+            AssetDatabase.Refresh();
+
+            // Optionally attach to a GameObject (requires the script to be compiled first — schedule it)
+            if (!string.IsNullOrEmpty(attachTo))
+            {
+                // We can't AddComponent immediately because the assembly hasn't recompiled yet.
+                // We note this in the response so the user knows to re-run or use addComponent after compile.
+                data = new Dictionary<string, object> { { "scriptPath", filePath }, { "pendingAttachTo", attachTo } };
+                return $"Script '{scriptName}.cs' created at '{filePath}'. Unity will recompile — run addComponent after compilation to attach it to '{attachTo}'.";
+            }
+
+            data = new Dictionary<string, object> { { "scriptPath", filePath } };
+            return $"Script '{scriptName}.cs' created at '{filePath}'. Unity is recompiling.";
+        }
+
+        private static string BuildScriptTemplate(string className, string template)
+        {
+            switch (template)
+            {
+                case "ScriptableObject":
+                    return
+$@"using UnityEngine;
+
+[CreateAssetMenu(fileName = ""{className}"", menuName = ""ScriptableObjects/{className}"")]
+public class {className} : ScriptableObject
+{{
+}}
+";
+                case "Editor":
+                    return
+$@"using UnityEditor;
+using UnityEngine;
+
+[CustomEditor(typeof(Object))]
+public class {className} : Editor
+{{
+    public override void OnInspectorGUI()
+    {{
+        base.OnInspectorGUI();
+    }}
+}}
+";
+                case "Interface":
+                    return
+$@"public interface {className}
+{{
+}}
+";
+                case "Empty":
+                    return
+$@"using UnityEngine;
+
+public class {className}
+{{
+}}
+";
+                default: // MonoBehaviour
+                    return
+$@"using UnityEngine;
+
+public class {className} : MonoBehaviour
+{{
+    void Start()
+    {{
+    }}
+
+    void Update()
+    {{
+    }}
+}}
+";
+            }
         }
 
         // ── 7. openScene ───────────────────────────────────────────────

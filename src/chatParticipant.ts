@@ -24,6 +24,9 @@ ACTIONS and their JSON shapes:
 5. setProperty
 { "action": "setProperty", "params": { "gameObjectName": string, "position"?: {"x":number,"y":number,"z":number}, "rotation"?: {"x":number,"y":number,"z":number}, "scale"?: {"x":number,"y":number,"z":number}, "rename"?: string, "active"?: boolean } }
 
+6. createScript
+{ "action": "createScript", "params": { "scriptName": string, "template"?: "MonoBehaviour"|"ScriptableObject"|"Editor"|"Interface"|"Empty", "savePath"?: string, "attachTo"?: string } }
+
 7. openScene
 { "action": "openScene", "params": { "scenePath": string, "additive"?: boolean } }
 
@@ -56,9 +59,11 @@ Rules:
 - Use English component names as Unity recognizes them: "Rigidbody", "BoxCollider", "SphereCollider", "CapsuleCollider", "MeshCollider", "AudioSource", "Camera", "Light", "NavMeshAgent", "Animator", "CharacterController", etc.
 - Default savePath for prefabs: "Prefabs"
 - Default savePath for scenes: "Scenes"
+- Default savePath for scripts: "Scripts"
 - If the user asks for "a cube" without specifying components, use primitiveType "Cube".
 - For createPrefab from a model, set modelPath if the user mentions an existing model file.
 - Use instantiatePrefab (not createPrefab) when the user wants to place an existing prefab into a scene.
+- Use createScript when the user wants to create a new C# script file.
 - Use getSceneHierarchy when the user asks what is in the scene, or to list objects.
 - Use listAssets when the user wants to browse or discover asset files.
 - Use saveScene whenever a save is requested or after a batch of changes.
@@ -92,6 +97,13 @@ You can describe what you want in natural language. Examples:
 \`\`\`
 @unity add a Cube at position 0,1,0
 @unity tạo một empty GameObject tên SpawnPoint trong Hierarchy
+\`\`\`
+
+**Create a Script**
+\`\`\`
+@unity create a MonoBehaviour script called EnemyAI in Scripts/Enemy
+@unity tạo script PlayerController gán vào Player
+@unity tạo ScriptableObject script tên ItemData lưu vào Scripts/Data
 \`\`\`
 
 **Add Component**
@@ -147,7 +159,7 @@ You can describe what you want in natural language. Examples:
 - \`/status\` — Check connection to Unity Editor
 - \`/help\` — Show this help message
 
-> **Setup**: Run \`Unity Copilot: Install Bridge into Unity Project\` from the Command Palette to install the C# bridge scripts into your Unity project.`;
+> **Setup**: Run \`Unity MCP: Install Bridge into Unity Project\` from the Command Palette to install the C# bridge scripts into your Unity project.`;
 
 // ── Chat participant handler ──────────────────────────────────────
 
@@ -156,7 +168,7 @@ export function registerChatParticipant(
   client: UnityClient,
 ): vscode.Disposable {
   const participant = vscode.chat.createChatParticipant(
-    'unity-copilot.unity',
+    'unity-mcp.unity',
     async (
       request: vscode.ChatRequest,
       _chatContext: vscode.ChatContext,
@@ -174,7 +186,7 @@ export function registerChatParticipant(
             stream.markdown('**Unity Editor: Timeout** ⚠️\n\nSocket connected but ping timed out. Unity may be busy.');
           }
         } else {
-          stream.markdown(`**Unity Editor: Disconnected** ❌\n\nState: \`${client.state}\`\n\nRun **Unity Copilot: Connect to Unity Editor** from the Command Palette, or open Unity with the bridge installed (it starts listening automatically).`);
+          stream.markdown(`**Unity Editor: Disconnected** ❌\n\nState: \`${client.state}\`\n\nRun **Unity MCP: Connect to Unity Editor** from the Command Palette, or open Unity with the bridge installed (it starts listening automatically).`);
         }
         return;
       }
@@ -222,7 +234,7 @@ export function registerChatParticipant(
         stream.markdown(
           '> **Unity Editor is not connected.**\n>\n' +
           '> 1. Make sure Unity is open with the bridge installed.\n' +
-          '> 2. Run **Unity Copilot: Connect to Unity Editor** from the Command Palette.\n' +
+          '> 2. Run **Unity MCP: Connect to Unity Editor** from the Command Palette.\n' +
           '> 3. Retry your request.\n\n' +
           'Use `@unity /status` to check connection state.',
         );
