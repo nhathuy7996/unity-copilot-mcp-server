@@ -257,6 +257,64 @@ const TOOLS = [
       required: ['query'],
     },
   },
+  {
+    name: 'unity_runMenuItem',
+    description: 'Execute any Unity Editor menu item by its full path. Useful for triggering built-in Editor operations like "AI/Bake", "Edit/Clear All PlayerPrefs", "GameObject/Create Empty". Example: { "menuPath": "Edit/Clear All PlayerPrefs" }',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        menuPath: { type: 'string', description: 'Full menu path as shown in Unity, e.g. "AI/Bake", "Edit/Clear All PlayerPrefs", "Window/General/Console"' },
+      },
+      required: ['menuPath'],
+    },
+  },
+  {
+    name: 'unity_getComponentProperties',
+    description: 'Read all serialized properties of a component on a GameObject. Returns a JSON object with property names and current values. Call this BEFORE unity_setComponentProperty to discover valid property names. Example: read NavMeshAgent speed — gameObjectName="Player", componentType="NavMeshAgent".',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        gameObjectName: { type: 'string', description: 'Name of the GameObject in the active scene' },
+        componentType:  { type: 'string', description: 'Component class name, e.g. "NavMeshAgent", "Rigidbody", "Light", "AudioSource"' },
+      },
+      required: ['gameObjectName', 'componentType'],
+    },
+  },
+  {
+    name: 'unity_setComponentProperty',
+    description: 'Set a specific serialized property on a component. Supports int, float, bool, string, enum, Vector2, Vector3, Color. For Vector3 use "x,y,z" format (e.g. "1.5,0,3"). For Color use "r,g,b" or "r,g,b,a" (0-1 range). For enum pass the option name (e.g. "Kinematic"). Call unity_getComponentProperties first to discover valid property names. Example: set NavMeshAgent speed — componentType="NavMeshAgent", propertyName="speed", value="5.5".',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        gameObjectName: { type: 'string' },
+        componentType:  { type: 'string', description: 'Component class name, e.g. "NavMeshAgent", "Rigidbody"' },
+        propertyName:   { type: 'string', description: 'Serialized field name from getComponentProperties, e.g. "speed", "mass", "m_Intensity"' },
+        value:          { type: 'string', description: 'New value as string. Numbers: "3.5". Bool: "true"/"false". Vector3: "1,2,3". Color: "1,0,0,1". Enum: option name.' },
+      },
+      required: ['gameObjectName', 'componentType', 'propertyName', 'value'],
+    },
+  },
+  {
+    name: 'unity_captureScreenshot',
+    description: 'Capture the current Scene view and return it as a PNG image. Useful to visually verify the result of scene modifications. Requires the Scene view tab to be open in Unity Editor.',
+    inputSchema: { type: 'object', properties: {}, required: [] },
+  },
+  {
+    name: 'unity_undoRedo',
+    description: 'Perform an Undo or Redo operation in Unity Editor, equivalent to Ctrl+Z or Ctrl+Y. Use to revert a mistaken change.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        operation: { type: 'string', enum: ['undo', 'redo'], description: '"undo" (default) reverts last action, "redo" re-applies it.' },
+      },
+      required: [],
+    },
+  },
+  {
+    name: 'unity_getUndoHistory',
+    description: 'Get the current Undo group index and the name of the most recent undoable operation in Unity Editor.',
+    inputSchema: { type: 'object', properties: {}, required: [] },
+  },
 ];
 
 // ── Bridge action map ─────────────────────────────────────────────
@@ -275,8 +333,14 @@ const TOOL_ACTION = {
   unity_deleteGameObject:      'deleteGameObject',
   unity_getSceneHierarchy:     'getSceneHierarchy',
   unity_listAssets:            'listAssets',
-  unity_findGameObjects:       'findGameObjects',
-  unity_refreshAssets:         'refreshAssets',
+  unity_findGameObjects:        'findGameObjects',
+  unity_refreshAssets:          'refreshAssets',
+  unity_runMenuItem:            'runMenuItem',
+  unity_getComponentProperties: 'getComponentProperties',
+  unity_setComponentProperty:   'setComponentProperty',
+  unity_captureScreenshot:      'captureScreenshot',
+  unity_undoRedo:               'undoRedo',
+  unity_getUndoHistory:         'getUndoHistory',
 };
 
 // ── MCP JSON-RPC 2.0 over stdio ───────────────────────────────────
@@ -294,7 +358,7 @@ async function handleRpc(req) {
       result: {
         protocolVersion: '2024-11-05',
         capabilities: { tools: {} },
-        serverInfo: { name: 'unity-mcp', version: '1.0.0' },
+        serverInfo: { name: 'unity-mcp', version: '1.2.0' },
       },
     });
   }
@@ -329,6 +393,21 @@ async function handleRpc(req) {
     let text = resp.success
       ? ('\u2705 ' + resp.message)
       : ('\u274c ' + resp.message);
+
+    // Screenshot: return inline image content alongside text
+    if (resp.success && resp.data && resp.data.imageBase64) {
+      return rpcOut({
+        jsonrpc: '2.0', id,
+        result: {
+          content: [
+            { type: 'text', text },
+            { type: 'image', data: resp.data.imageBase64, mimeType: resp.data.mimeType || 'image/png' },
+          ],
+          isError: false,
+        },
+      });
+    }
+
     if (resp.data) text += '\n' + JSON.stringify(resp.data, null, 2);
 
     return rpcOut({

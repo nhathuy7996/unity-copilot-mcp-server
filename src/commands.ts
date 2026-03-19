@@ -17,6 +17,12 @@ export type ActionName =
   | 'saveScene'
   | 'findGameObjects'
   | 'refreshAssets'
+  | 'runMenuItem'
+  | 'getComponentProperties'
+  | 'setComponentProperty'
+  | 'captureScreenshot'
+  | 'undoRedo'
+  | 'getUndoHistory'
   | 'ping';
 
 // ── Per-action parameter shapes ───────────────────────────────
@@ -187,7 +193,7 @@ export type ActionParams =
   | SetMaterialParams
   | SetAnimatorControllerParams
   | SaveSceneParams
-  | Record<string, never>; // ping
+  | Record<string, unknown>; // ping, undoRedo, getComponentProperties, setComponentProperty, etc.
 
 // ── Wire message shapes ────────────────────────────────────────
 

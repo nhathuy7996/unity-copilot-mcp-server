@@ -82,6 +82,24 @@ namespace UnityCopilot
                     case "findGameObjects":
                         message = FindGameObjects(p, out data);
                         break;
+                    case "runMenuItem":
+                        message = RunMenuItem(p);
+                        break;
+                    case "getComponentProperties":
+                        message = GetComponentProperties(p, out data);
+                        break;
+                    case "setComponentProperty":
+                        message = SetComponentProperty(p);
+                        break;
+                    case "captureScreenshot":
+                        message = CaptureScreenshot(p, out data);
+                        break;
+                    case "undoRedo":
+                        message = UndoRedo(p);
+                        break;
+                    case "getUndoHistory":
+                        message = GetUndoHistory(out data);
+                        break;
                     default:
                         return BuildResponse(id, false, $"Unknown action: {action}", null);
                 }
@@ -576,6 +594,232 @@ namespace UnityCopilot
             var scene = EditorSceneManager.GetActiveScene();
             bool saved = EditorSceneManager.SaveScene(scene);
             return saved ? $"Scene '{scene.name}' saved." : $"Failed to save scene '{scene.name}'. Has the scene been saved to disk before?";
+        }
+
+        // ── 17. runMenuItem ────────────────────────────────────────────
+        // Executes any Unity Editor menu item by its full menu path.
+        private static string RunMenuItem(SimpleJson p)
+        {
+            string menuPath = p.GetString("menuPath");
+            if (string.IsNullOrEmpty(menuPath)) { throw new ArgumentException("'menuPath' is required"); }
+
+            bool ok = EditorApplication.ExecuteMenuItem(menuPath);
+            if (!ok) { throw new InvalidOperationException($"Menu item '{menuPath}' not found or not currently executable (may be greyed out)."); }
+            return $"Executed menu item '{menuPath}'.";
+        }
+
+        // ── 18. getComponentProperties ─────────────────────────────────
+        // Returns all serialized properties of a component as a JSON object.
+        private static string GetComponentProperties(SimpleJson p, out object data)
+        {
+            string goName   = p.GetString("gameObjectName");
+            string compName = p.GetString("componentType");
+            if (string.IsNullOrEmpty(goName))   { throw new ArgumentException("'gameObjectName' is required"); }
+            if (string.IsNullOrEmpty(compName)) { throw new ArgumentException("'componentType' is required"); }
+
+            GameObject go = FindGameObjectInScene(goName);
+            if (go == null) { throw new InvalidOperationException($"GameObject '{goName}' not found. Use unity_getSceneHierarchy to list available objects."); }
+
+            Type compType = ResolveComponentType(compName);
+            if (compType == null) { throw new InvalidOperationException($"Component type '{compName}' not recognised."); }
+
+            Component comp = go.GetComponent(compType);
+            if (comp == null) { throw new InvalidOperationException($"'{goName}' does not have a '{compName}' component. Use unity_findGameObjects with hasComponent to verify."); }
+
+            var so   = new SerializedObject(comp);
+            var prop = so.GetIterator();
+            var sb   = new System.Text.StringBuilder("{");
+            bool first = true;
+
+            if (prop.NextVisible(true))
+            {
+                do
+                {
+                    if (prop.name == "m_Script") { continue; }
+                    string jsonVal = SerializedPropToJson(prop);
+                    if (jsonVal == null) { continue; }
+                    if (!first) { sb.Append(","); }
+                    first = false;
+                    sb.Append($"\"{prop.name.Replace("\"", "\\\"")}\":{jsonVal}");
+                }
+                while (prop.NextVisible(false));
+            }
+            sb.Append("}");
+
+            data = null;
+            return sb.ToString();
+        }
+
+        private static string SerializedPropToJson(SerializedProperty prop)
+        {
+            switch (prop.propertyType)
+            {
+                case SerializedPropertyType.Integer:     return prop.intValue.ToString();
+                case SerializedPropertyType.Boolean:     return prop.boolValue ? "true" : "false";
+                case SerializedPropertyType.Float:       return prop.floatValue.ToString("G6");
+                case SerializedPropertyType.String:      return $"\"{prop.stringValue.Replace("\\","\\\\").Replace("\"","\\\"")}\"";
+                case SerializedPropertyType.Enum:        return $"\"{prop.enumNames[prop.enumValueIndex]}\"";
+                case SerializedPropertyType.Vector2:     var v2 = prop.vector2Value; return $"{{\"x\":{v2.x},\"y\":{v2.y}}}";
+                case SerializedPropertyType.Vector3:     var v3 = prop.vector3Value; return $"{{\"x\":{v3.x},\"y\":{v3.y},\"z\":{v3.z}}}";
+                case SerializedPropertyType.Vector4:     var v4 = prop.vector4Value; return $"{{\"x\":{v4.x},\"y\":{v4.y},\"z\":{v4.z},\"w\":{v4.w}}}";
+                case SerializedPropertyType.Color:       var c  = prop.colorValue;   return $"{{\"r\":{c.r},\"g\":{c.g},\"b\":{c.b},\"a\":{c.a}}}";
+                case SerializedPropertyType.LayerMask:   return prop.intValue.ToString();
+                case SerializedPropertyType.Rect:        var r  = prop.rectValue;    return $"{{\"x\":{r.x},\"y\":{r.y},\"width\":{r.width},\"height\":{r.height}}}";
+                case SerializedPropertyType.ObjectReference:
+                    return prop.objectReferenceValue != null
+                        ? $"\"{prop.objectReferenceValue.name.Replace("\"","\\\"")}\""
+                        : "null";
+                default: return null;
+            }
+        }
+
+        // ── 19. setComponentProperty ────────────────────────────────────
+        // Sets a single serialized property on a component by name.
+        // Pass value as a string; it is parsed to match the property type.
+        // For Vector3 use "x,y,z" format (e.g. "1.5,0,3").
+        private static string SetComponentProperty(SimpleJson p)
+        {
+            string goName    = p.GetString("gameObjectName");
+            string compName  = p.GetString("componentType");
+            string propName  = p.GetString("propertyName");
+            string rawValue  = p.GetString("value");
+            if (string.IsNullOrEmpty(goName))   { throw new ArgumentException("'gameObjectName' is required"); }
+            if (string.IsNullOrEmpty(compName)) { throw new ArgumentException("'componentType' is required"); }
+            if (string.IsNullOrEmpty(propName)) { throw new ArgumentException("'propertyName' is required"); }
+            if (rawValue == null)               { throw new ArgumentException("'value' is required"); }
+
+            GameObject go = FindGameObjectInScene(goName);
+            if (go == null) { throw new InvalidOperationException($"GameObject '{goName}' not found. Use unity_getSceneHierarchy to list available objects."); }
+
+            Type compType = ResolveComponentType(compName);
+            if (compType == null) { throw new InvalidOperationException($"Component type '{compName}' not recognised."); }
+
+            Component comp = go.GetComponent(compType);
+            if (comp == null) { throw new InvalidOperationException($"'{goName}' does not have a '{compName}' component."); }
+
+            var so   = new SerializedObject(comp);
+            var prop = so.FindProperty(propName);
+            if (prop == null) { throw new InvalidOperationException($"Property '{propName}' not found on '{compName}'. Use unity_getComponentProperties to list available properties."); }
+
+            Undo.RecordObject(comp, $"UnityCopilot: Set {compName}.{propName}");
+
+            switch (prop.propertyType)
+            {
+                case SerializedPropertyType.Integer:
+                    if (!int.TryParse(rawValue, out int iv)) { throw new FormatException($"Cannot parse '{rawValue}' as int."); }
+                    prop.intValue = iv;
+                    break;
+                case SerializedPropertyType.Boolean:
+                    prop.boolValue = rawValue.Trim().ToLower() == "true" || rawValue.Trim() == "1";
+                    break;
+                case SerializedPropertyType.Float:
+                    if (!float.TryParse(rawValue, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float fv))
+                    { throw new FormatException($"Cannot parse '{rawValue}' as float."); }
+                    prop.floatValue = fv;
+                    break;
+                case SerializedPropertyType.String:
+                    prop.stringValue = rawValue;
+                    break;
+                case SerializedPropertyType.Enum:
+                    int enumIdx = System.Array.IndexOf(prop.enumNames, rawValue);
+                    if (enumIdx < 0) { throw new InvalidOperationException($"Enum value '{rawValue}' not valid. Options: {string.Join(", ", prop.enumNames)}"); }
+                    prop.enumValueIndex = enumIdx;
+                    break;
+                case SerializedPropertyType.Vector3:
+                    var parts3 = rawValue.Split(',');
+                    if (parts3.Length != 3) { throw new FormatException("Vector3 value must be in 'x,y,z' format e.g. '1.5,0,3'."); }
+                    prop.vector3Value = new Vector3(
+                        float.Parse(parts3[0].Trim(), System.Globalization.CultureInfo.InvariantCulture),
+                        float.Parse(parts3[1].Trim(), System.Globalization.CultureInfo.InvariantCulture),
+                        float.Parse(parts3[2].Trim(), System.Globalization.CultureInfo.InvariantCulture));
+                    break;
+                case SerializedPropertyType.Vector2:
+                    var parts2 = rawValue.Split(',');
+                    if (parts2.Length != 2) { throw new FormatException("Vector2 value must be in 'x,y' format e.g. '1.5,3'."); }
+                    prop.vector2Value = new Vector2(
+                        float.Parse(parts2[0].Trim(), System.Globalization.CultureInfo.InvariantCulture),
+                        float.Parse(parts2[1].Trim(), System.Globalization.CultureInfo.InvariantCulture));
+                    break;
+                case SerializedPropertyType.Color:
+                    var partsC = rawValue.Split(',');
+                    if (partsC.Length < 3) { throw new FormatException("Color value must be in 'r,g,b' or 'r,g,b,a' format (0-1 range)."); }
+                    float a = partsC.Length >= 4 ? float.Parse(partsC[3].Trim(), System.Globalization.CultureInfo.InvariantCulture) : 1f;
+                    prop.colorValue = new Color(
+                        float.Parse(partsC[0].Trim(), System.Globalization.CultureInfo.InvariantCulture),
+                        float.Parse(partsC[1].Trim(), System.Globalization.CultureInfo.InvariantCulture),
+                        float.Parse(partsC[2].Trim(), System.Globalization.CultureInfo.InvariantCulture), a);
+                    break;
+                default:
+                    throw new NotSupportedException($"Property type '{prop.propertyType}' is not supported for direct editing. Edit the component manually in the Inspector.");
+            }
+
+            so.ApplyModifiedProperties();
+            EditorUtility.SetDirty(comp);
+            return $"Set '{compName}.{propName}' = '{rawValue}' on '{goName}'.";
+        }
+
+        // ── 20. captureScreenshot ───────────────────────────────────────
+        // Renders the active Scene view to a PNG and returns it as base64.
+        private static string CaptureScreenshot(SimpleJson p, out object data)
+        {
+            SceneView sv = SceneView.lastActiveSceneView;
+            if (sv == null) { throw new InvalidOperationException("No active Scene view found. Open the Scene view tab in the Unity Editor first."); }
+
+            Camera cam    = sv.camera;
+            int    width  = Mathf.Max(1, (int)sv.position.width);
+            int    height = Mathf.Max(1, (int)sv.position.height);
+
+            var rt   = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32);
+            var prev = cam.targetTexture;
+            cam.targetTexture = rt;
+            cam.Render();
+            cam.targetTexture = prev;
+
+            RenderTexture.active = rt;
+            var tex = new Texture2D(width, height, TextureFormat.RGB24, false);
+            tex.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+            tex.Apply();
+            RenderTexture.active = null;
+
+            byte[] bytes  = tex.EncodeToPNG();
+            string base64 = Convert.ToBase64String(bytes);
+
+            UnityEngine.Object.DestroyImmediate(tex);
+            rt.Release();
+            UnityEngine.Object.DestroyImmediate(rt);
+
+            data = new Dictionary<string, object>
+            {
+                { "imageBase64", base64 },
+                { "mimeType",    "image/png" },
+                { "width",       width },
+                { "height",      height },
+            };
+            return $"Scene view screenshot captured ({width}x{height}).";
+        }
+
+        // ── 21. undoRedo ───────────────────────────────────────────────
+        private static string UndoRedo(SimpleJson p)
+        {
+            string op = p.GetString("operation") ?? "undo";
+            if (op == "redo") { Undo.PerformRedo(); return "Redo performed successfully."; }
+            Undo.PerformUndo();
+            return "Undo performed successfully.";
+        }
+
+        // ── 22. getUndoHistory ──────────────────────────────────────────
+        private static string GetUndoHistory(out object data)
+        {
+            string currentGroup = Undo.GetCurrentGroupName();
+            int    groupIndex   = Undo.GetCurrentGroup();
+
+            var sb = new System.Text.StringBuilder("{");
+            sb.Append($"\"currentGroup\":{groupIndex}");
+            sb.Append($",\"currentGroupName\":\"{currentGroup.Replace("\"","\\\"").Replace("\\","\\\\").Replace("\n","\\n")}\"");
+            sb.Append("}");
+
+            data = null;
+            return sb.ToString();
         }
 
         // ── Helpers ────────────────────────────────────────────────────

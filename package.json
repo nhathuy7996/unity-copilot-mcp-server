@@ -1,8 +1,8 @@
 {
-  "name": "unity-copilot-mcp-server",
-  "displayName": "Unity Copilot MCP Server",
-  "description": "Allows GitHub Copilot Chat to control Unity Editor — create prefabs, scenes, GameObjects, components, and scripts via natural language.",
-  "version": "0.1.5",
+  "name": "gdt-unity-mcp-server",
+  "displayName": "GDT Unity MCP Server",
+  "description": "Allows AI agent Chat to control Unity Editor — create prefabs, scenes, GameObjects, components, and scripts via natural language.",
+  "version": "0.1.7",
   "publisher": "gamedevtoi",
   "engines": {
     "vscode": "^1.90.0"
@@ -19,7 +19,7 @@
   "contributes": {
     "chatParticipants": [
       {
-        "id": "unity-copilot.unity",
+        "id": "unity-mcp.unity",
         "fullName": "Unity Editor",
         "name": "unity",
         "description": "Controls Unity Editor: create prefabs, scenes, GameObjects, scripts, and components.",
@@ -32,36 +32,48 @@
           {
             "name": "help",
             "description": "Show available commands and examples"
+          },
+          {
+            "name": "undo",
+            "description": "Undo the last operation in Unity Editor"
+          },
+          {
+            "name": "redo",
+            "description": "Redo the last undone operation in Unity Editor"
+          },
+          {
+            "name": "history",
+            "description": "Show the current undo history group"
           }
         ]
       }
     ],
     "commands": [
       {
-        "command": "unity-copilot.installBridge",
-        "title": "Unity Copilot: Install Bridge into Unity Project",
-        "category": "Unity Copilot"
+        "command": "gdt-unity-mcp.installBridge",
+        "title": "Unity MCP: Install Bridge into Unity Project",
+        "category": "Unity MCP"
       },
       {
-        "command": "unity-copilot.connect",
-        "title": "Unity Copilot: Connect to Unity Editor",
-        "category": "Unity Copilot"
+        "command": "gdt-unity-mcp.connect",
+        "title": "Unity MCP: Connect to Unity Editor",
+        "category": "Unity MCP"
       },
       {
-        "command": "unity-copilot.disconnect",
-        "title": "Unity Copilot: Disconnect from Unity Editor",
-        "category": "Unity Copilot"
+        "command": "gdt-unity-mcp.disconnect",
+        "title": "Unity MCP: Disconnect from Unity Editor",
+        "category": "Unity MCP"
       }
     ],
     "configuration": {
-      "title": "Unity Copilot",
+      "title": "Unity MCP Server Settings",
       "properties": {
-        "unity-copilot.bridgePort": {
+        "gdt-unity-mcp.bridgePort": {
           "type": "number",
           "default": 6400,
           "description": "Port number for the Unity Editor WebSocket bridge server."
         },
-        "unity-copilot.autoConnect": {
+        "gdt-unity-mcp.autoConnect": {
           "type": "boolean",
           "default": true,
           "description": "Automatically attempt to connect to Unity Editor on activation."

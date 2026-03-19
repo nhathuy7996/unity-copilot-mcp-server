@@ -185,6 +185,38 @@ export function registerChatParticipant(
         return;
       }
 
+      // ── /undo ─────────────────────────────────────────────────────
+      if (request.command === 'undo') {
+        if (!client.isConnected) { stream.markdown('> Unity Editor is not connected.'); return; }
+        try {
+          const res = await client.sendCommand('undoRedo', { operation: 'undo' });
+          stream.markdown(res.success ? `✅ ${res.message}` : `❌ ${res.message}`);
+        } catch (err) { stream.markdown(`> Error: ${String(err)}`); }
+        return;
+      }
+
+      // ── /redo ─────────────────────────────────────────────────────
+      if (request.command === 'redo') {
+        if (!client.isConnected) { stream.markdown('> Unity Editor is not connected.'); return; }
+        try {
+          const res = await client.sendCommand('undoRedo', { operation: 'redo' });
+          stream.markdown(res.success ? `✅ ${res.message}` : `❌ ${res.message}`);
+        } catch (err) { stream.markdown(`> Error: ${String(err)}`); }
+        return;
+      }
+
+      // ── /history ──────────────────────────────────────────────────
+      if (request.command === 'history') {
+        if (!client.isConnected) { stream.markdown('> Unity Editor is not connected.'); return; }
+        try {
+          const res = await client.sendCommand('getUndoHistory', {});
+          stream.markdown(res.success
+            ? `**Undo History**\n\n\`\`\`json\n${res.message}\n\`\`\``
+            : `❌ ${res.message}`);
+        } catch (err) { stream.markdown(`> Error: ${String(err)}`); }
+        return;
+      }
+
       // ── Guard: must be connected ───────────────────────────────────
       if (!client.isConnected) {
         stream.markdown(
@@ -284,8 +316,11 @@ export function registerChatParticipant(
       _token: vscode.CancellationToken,
     ): vscode.ChatFollowup[] {
       return [
-        { prompt: '/status', label: 'Check connection status', command: 'status' },
-        { prompt: '/help', label: 'Show help & examples', command: 'help' },
+        { prompt: '/status',  label: 'Check connection status', command: 'status'  },
+        { prompt: '/help',    label: 'Show help & examples',    command: 'help'    },
+        { prompt: '/undo',    label: 'Undo last action',        command: 'undo'    },
+        { prompt: '/redo',    label: 'Redo last action',        command: 'redo'    },
+        { prompt: '/history', label: 'Show undo history',       command: 'history' },
       ];
     },
   };
