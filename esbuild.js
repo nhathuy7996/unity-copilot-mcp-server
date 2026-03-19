@@ -3,7 +3,7 @@ const esbuild = require('esbuild');
 const isWatch = process.argv.includes('--watch');
 
 /** @type {import('esbuild').BuildOptions} */
-const buildOptions = {
+const extensionOptions = {
   entryPoints: ['src/extension.ts'],
   bundle: true,
   outfile: 'dist/extension.js',
@@ -16,11 +16,27 @@ const buildOptions = {
   logLevel: 'info',
 };
 
+/** @type {import('esbuild').BuildOptions} */
+const mcpServerOptions = {
+  entryPoints: ['unity-mcp.js'],
+  bundle: true,
+  outfile: 'dist/unity-mcp.js',
+  format: 'cjs',
+  platform: 'node',
+  target: 'node18',
+  sourcemap: false,
+  minify: false,
+  logLevel: 'info',
+};
+
 if (isWatch) {
-  esbuild.context(buildOptions).then(ctx => {
-    ctx.watch();
-    console.log('Watching for changes...');
-  });
+  Promise.all([
+    esbuild.context(extensionOptions).then(ctx => ctx.watch()),
+    esbuild.context(mcpServerOptions).then(ctx => ctx.watch()),
+  ]).then(() => console.log('Watching for changes...'));
 } else {
-  esbuild.build(buildOptions).catch(() => process.exit(1));
+  Promise.all([
+    esbuild.build(extensionOptions),
+    esbuild.build(mcpServerOptions),
+  ]).catch(() => process.exit(1));
 }

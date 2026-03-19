@@ -172,7 +172,7 @@ async function setupMcpJson(
   try {
     const vscodeDir = path.join(unityRoot, '.vscode');
     const mcpPath   = path.join(vscodeDir, 'mcp.json');
-    const mcpServerPath = path.join(extensionPath, 'unity-mcp.js');
+    const mcpServerPath = path.join(extensionPath, 'dist', 'unity-mcp.js');
 
     fs.mkdirSync(vscodeDir, { recursive: true });
 
