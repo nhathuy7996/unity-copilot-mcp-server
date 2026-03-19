@@ -6,7 +6,6 @@ export type ActionName =
   | 'createScene'
   | 'addComponent'
   | 'createGameObject'
-  | 'createScript'
   | 'setProperty'
   | 'openScene'
   | 'instantiatePrefab'
@@ -16,6 +15,8 @@ export type ActionName =
   | 'setMaterial'
   | 'setAnimatorController'
   | 'saveScene'
+  | 'findGameObjects'
+  | 'refreshAssets'
   | 'ping';
 
 // ── Per-action parameter shapes ───────────────────────────────

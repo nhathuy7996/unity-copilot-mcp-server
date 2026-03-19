@@ -49,9 +49,6 @@ namespace UnityCopilot
                     case "createGameObject":
                         message = CreateGameObject(p, out data);
                         break;
-                    case "createScript":
-                        message = CreateScript(p, out data);
-                        break;
                     case "setProperty":
                         message = SetProperty(p);
                         break;
@@ -78,6 +75,12 @@ namespace UnityCopilot
                         break;
                     case "saveScene":
                         message = SaveScene();
+                        break;
+                    case "refreshAssets":
+                        message = RefreshAssets();
+                        break;
+                    case "findGameObjects":
+                        message = FindGameObjects(p, out data);
                         break;
                     default:
                         return BuildResponse(id, false, $"Unknown action: {action}", null);
@@ -258,59 +261,7 @@ namespace UnityCopilot
             return $"GameObject '{name}' created in the active scene.";
         }
 
-        // ── 5. createScript ────────────────────────────────────────────
-        private static string CreateScript(SimpleJson p, out object data)
-        {
-            string scriptName = p.GetString("scriptName");
-            if (string.IsNullOrEmpty(scriptName)) { throw new ArgumentException("'scriptName' is required"); }
-
-            string savePath = p.GetString("savePath") ?? "Scripts";
-            string template = p.GetString("template") ?? "MonoBehaviour";
-            string attachTo = p.GetString("attachTo");
-
-            EnsureAssetsFolder(savePath);
-            string scriptPath = $"Assets/{savePath}/{scriptName}.cs";
-            string fullPath = Path.Combine(Application.dataPath, $"../{scriptPath}");
-            // Normalise path
-            fullPath = Path.GetFullPath(fullPath);
-
-            if (File.Exists(fullPath))
-            {
-                throw new InvalidOperationException($"Script already exists at '{scriptPath}'. Delete it first or choose a different name.");
-            }
-
-            string content = BuildScriptTemplate(scriptName, template);
-            File.WriteAllText(fullPath, content, Encoding.UTF8);
-            AssetDatabase.Refresh();
-
-            data = new Dictionary<string, object> { { "scriptPath", scriptPath } };
-            string msg = $"Script '{scriptName}.cs' created at {scriptPath}.";
-
-            // Attach to GameObject (deferred by one import cycle via AssetDatabase)
-            if (!string.IsNullOrEmpty(attachTo))
-            {
-                // Import must complete first — we register a deferred callback
-                EditorApplication.delayCall += () =>
-                {
-                    var monoScript = AssetDatabase.LoadAssetAtPath<MonoScript>(scriptPath);
-                    if (monoScript == null) { Debug.LogWarning($"[UnityCopilot] Could not load script asset at {scriptPath}"); return; }
-                    Type scriptType = monoScript.GetClass();
-                    if (scriptType == null) { Debug.LogWarning($"[UnityCopilot] Script class not yet compiled. Attach manually."); return; }
-
-                    GameObject go = FindGameObjectInScene(attachTo);
-                    if (go == null) { Debug.LogWarning($"[UnityCopilot] GameObject '{attachTo}' not found for script attachment."); return; }
-
-                    Undo.AddComponent(go, scriptType);
-                    EditorUtility.SetDirty(go);
-                    Debug.Log($"[UnityCopilot] Attached '{scriptName}' to '{attachTo}'.");
-                };
-                msg += $" Will attach to '{attachTo}' after compilation.";
-            }
-
-            return msg;
-        }
-
-        // ── 6. setProperty ─────────────────────────────────────────────
+        // ── 5. setProperty ──────────────────────────────────────────
         private static string SetProperty(SimpleJson p)
         {
             string goName = p.GetString("gameObjectName");
@@ -518,6 +469,107 @@ namespace UnityCopilot
             return $"Set AnimatorController '{ctrl.name}' on '{goName}'.";
         }
 
+        // ── 15. refreshAssets ──────────────────────────────────────────
+        private static string RefreshAssets()
+        {
+            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+            return "AssetDatabase refreshed. Unity will compile any new or changed scripts.";
+        }
+
+        // ── 16. findGameObjects ─────────────────────────────────────────
+        // Searches for GameObjects in the active scene by name (partial match).
+        // Optionally filters by component type.
+        private static string FindGameObjects(SimpleJson p, out object data)
+        {
+            string query = p.GetString("query");
+            if (string.IsNullOrEmpty(query)) { throw new ArgumentException("'query' is required"); }
+
+            string hasComponent = p.GetString("hasComponent");
+            bool includeChildren = !p.HasKey("includeChildren") || p.GetBool("includeChildren");
+
+            Type filterType = null;
+            if (!string.IsNullOrEmpty(hasComponent))
+            {
+                filterType = ResolveComponentType(hasComponent);
+                if (filterType == null) { throw new InvalidOperationException($"Component type '{hasComponent}' not recognised."); }
+            }
+
+            var scene = EditorSceneManager.GetActiveScene();
+            var roots = scene.GetRootGameObjects();
+            var results = new List<GameObject>();
+
+            foreach (var root in roots)
+            {
+                if (includeChildren)
+                {
+                    var allTransforms = root.GetComponentsInChildren<Transform>(true);
+                    foreach (var t in allTransforms)
+                    {
+                        if (t.gameObject.name.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            results.Add(t.gameObject);
+                        }
+                    }
+                }
+                else
+                {
+                    if (root.name.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        results.Add(root);
+                    }
+                }
+            }
+
+            // Filter by component if requested
+            if (filterType != null)
+            {
+                results.RemoveAll(go => go.GetComponent(filterType) == null);
+            }
+
+            // Build JSON result
+            var sb = new System.Text.StringBuilder("[");
+            bool first = true;
+            foreach (var go in results)
+            {
+                if (!first) { sb.Append(","); }
+                first = false;
+
+                string escapedName = go.name.Replace("\\", "\\\\").Replace("\"", "\\\"");
+                string path = GetHierarchyPath(go.transform);
+                string escapedPath = path.Replace("\\", "\\\\").Replace("\"", "\\\"");
+
+                // Collect component names
+                var comps = go.GetComponents<Component>();
+                var compNames = new System.Text.StringBuilder("[");
+                bool cFirst = true;
+                foreach (var c in comps)
+                {
+                    if (c == null) continue;
+                    if (!cFirst) { compNames.Append(","); }
+                    cFirst = false;
+                    compNames.Append($"\"{c.GetType().Name}\"");
+                }
+                compNames.Append("]");
+
+                sb.Append($"{{\"name\":\"{escapedName}\",\"path\":\"{escapedPath}\",\"active\":{go.activeSelf.ToString().ToLower()},\"children\":{go.transform.childCount},\"components\":{compNames}}}");
+            }
+            sb.Append("]");
+
+            data = null;
+            return sb.ToString();
+        }
+
+        private static string GetHierarchyPath(Transform t)
+        {
+            var parts = new List<string>();
+            while (t != null)
+            {
+                parts.Insert(0, t.gameObject.name);
+                t = t.parent;
+            }
+            return string.Join("/", parts);
+        }
+
         // ── 14. saveScene ──────────────────────────────────────────────
         private static string SaveScene()
         {
@@ -586,64 +638,6 @@ namespace UnityCopilot
             }
 
             return null;
-        }
-
-        private static string BuildScriptTemplate(string className, string template)
-        {
-            switch (template)
-            {
-                case "ScriptableObject":
-                    return
-$@"using UnityEngine;
-
-[CreateAssetMenu(fileName = ""{className}"", menuName = ""{className}"")]
-public class {className} : ScriptableObject
-{{
-    // TODO: Add your data fields here
-}}
-";
-                case "Editor":
-                    return
-$@"using UnityEditor;
-using UnityEngine;
-
-[CustomEditor(typeof(MonoBehaviour))]
-public class {className} : Editor
-{{
-    public override void OnInspectorGUI()
-    {{
-        base.OnInspectorGUI();
-    }}
-}}
-";
-                case "Interface":
-                    return
-$@"public interface {className}
-{{
-    // TODO: Add interface members
-}}
-";
-                case "Empty":
-                    return $"// {className}.cs\n";
-
-                default: // MonoBehaviour
-                    return
-$@"using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-
-public class {className} : MonoBehaviour
-{{
-    void Start()
-    {{
-    }}
-
-    void Update()
-    {{
-    }}
-}}
-";
-            }
         }
 
         // ── JSON response builder ──────────────────────────────────────

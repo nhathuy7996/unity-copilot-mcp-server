@@ -21,10 +21,7 @@ ACTIONS and their JSON shapes:
 4. createGameObject
 { "action": "createGameObject", "params": { "name": string, "parent"?: string, "primitiveType"?: "Cube"|"Sphere"|"Plane"|"Cylinder"|"Capsule"|"Quad"|"Empty", "position"?: {"x":number,"y":number,"z":number}, "rotation"?: {"x":number,"y":number,"z":number}, "scale"?: {"x":number,"y":number,"z":number}, "components"?: string[] } }
 
-5. createScript
-{ "action": "createScript", "params": { "scriptName": string, "template"?: "MonoBehaviour"|"ScriptableObject"|"Editor"|"Interface"|"Empty", "savePath"?: string, "attachTo"?: string } }
-
-6. setProperty
+5. setProperty
 { "action": "setProperty", "params": { "gameObjectName": string, "position"?: {"x":number,"y":number,"z":number}, "rotation"?: {"x":number,"y":number,"z":number}, "scale"?: {"x":number,"y":number,"z":number}, "rename"?: string, "active"?: boolean } }
 
 7. openScene
@@ -52,11 +49,13 @@ Common assetType values: "Prefab", "Scene", "Material", "AnimatorController", "A
 14. saveScene  — save the currently active scene
 { "action": "saveScene", "params": {} }
 
+15. findGameObjects  — search for GameObjects in the active scene by name
+{ "action": "findGameObjects", "params": { "query": string, "hasComponent"?: string, "includeChildren"?: boolean } }
+
 Rules:
 - Use English component names as Unity recognizes them: "Rigidbody", "BoxCollider", "SphereCollider", "CapsuleCollider", "MeshCollider", "AudioSource", "Camera", "Light", "NavMeshAgent", "Animator", "CharacterController", etc.
 - Default savePath for prefabs: "Prefabs"
 - Default savePath for scenes: "Scenes"
-- Default savePath for scripts: "Scripts"
 - If the user asks for "a cube" without specifying components, use primitiveType "Cube".
 - For createPrefab from a model, set modelPath if the user mentions an existing model file.
 - Use instantiatePrefab (not createPrefab) when the user wants to place an existing prefab into a scene.
@@ -99,12 +98,6 @@ You can describe what you want in natural language. Examples:
 \`\`\`
 @unity add AudioSource to the Enemy GameObject
 @unity gán NavMeshAgent vào Player
-\`\`\`
-
-**Create a Script**
-\`\`\`
-@unity create a MonoBehaviour script named EnemyAI and attach it to Enemy
-@unity tạo script GameManager dạng MonoBehaviour, lưu vào Scripts/Managers
 \`\`\`
 
 **Set Properties**

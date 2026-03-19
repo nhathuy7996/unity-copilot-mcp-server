@@ -3,63 +3,101 @@
    <img src="images/banner.png" alt="Unity MCP Server Banner" />
 </p>
 
+# Unity Copilot MCP Server
 
-# Unity Copilot for Unity Editor
+> Control Unity Editor from AI assistants (GitHub Copilot, Claude, etc.) via the Model Context Protocol (MCP).
 
-> Control Unity Editor with natural language via VS Code and GitHub Copilot Chat.
+## How It Works
 
-## Usage
+```
+AI Assistant (Copilot / Claude / etc.)
+  ←— MCP (JSON-RPC over stdio) —→
+unity-mcp.js (MCP Server)
+  ←— WebSocket —→
+Unity Editor (UnityBridgeServer on ws://127.0.0.1:6400)
+  └─ UnityCommandHandler.cs (executes on main thread)
+       └─ UnityEditor API (PrefabUtility, EditorSceneManager, …)
+```
 
-1. **Install the extension** in VS Code and open your Unity workspace.
-2. **Run the bridge install command:**
-   - Press `Cmd+Shift+P` (or `Ctrl+Shift+P` on Windows/Linux), type `Unity Copilot: Install Unity Copilot Bridge` and select it.
-   - The extension will automatically copy the Unity bridge script to `Assets/Editor/UnityBridge/` in your project.
-3. **Connect:**
-   - Click the "Unity Copilot Bridge" status bar item or run the command `Unity Copilot: Connect`.
-   - Make sure Unity Editor is running and listening on port `6400` (can be changed in settings).
-4. **Chat with @unity** in Copilot Chat to control Unity:
-   - Example: `Create a prefab Enemy with Rigidbody and BoxCollider`
-   - Example: `Add Light component to GameObject MainCamera`
+## Setup
 
-## Supported Commands
+### 1. Install the Unity Bridge
 
-| Command            | Description                                                |
-|--------------------|-----------------------------------------------------------|
-| createPrefab       | Create a new prefab from a GameObject or 3D model         |
-| createScene        | Create and save a new scene                               |
-| createGameObject   | Add a primitive or empty GameObject to the scene          |
-| addComponent       | Attach a component to an existing GameObject              |
-| createScript       | Generate a C# script from a template and (optionally) attach it |
-| setProperty        | Move, rotate, scale, rename, or toggle GameObject state   |
-| openScene          | Open a scene by name or path                              |
-| getSceneHierarchy  | List all root GameObjects in the current scene            |
-| listAssets         | List assets in a folder, filter by type                   |
+Copy the two C# files from `unity-bridge/` into your Unity project:
 
-## Settings
+```
+Assets/Editor/UnityBridge/UnityBridgeServer.cs
+Assets/Editor/UnityBridge/UnityCommandHandler.cs
+```
 
-| Setting                     | Default | Description                                 |
-|-----------------------------|---------|---------------------------------------------|
-| `unity-copilot.bridgePort`  | `6400`  | WebSocket port the Unity bridge listens on   |
-| `unity-copilot.autoConnect` | `true`  | Auto-connect when the extension activates    |
+Or use the VS Code command: `Unity Copilot: Install Bridge into Unity Project`.
 
-## Requirements
+The bridge server starts automatically when Unity enters Editor mode and listens on `ws://127.0.0.1:6400`.
 
-- VS Code 1.90+
-- GitHub Copilot extension
-- Unity 2022.3+ (LTS)
+### 2. Configure MCP Server
 
-## License
-MIT
+Add to your `.vscode/mcp.json` (workspace or user settings):
 
-|       Action       |                         Description                           |
-|--------------------|---------------------------------------------------------------|
-| `createPrefab`     | Create a prefab from scratch or an existing 3D model          |
-| `createScene`      | Create and save a new scene, optionally add to Build Settings |
-| `createGameObject` | Add a primitive or empty GameObject to the active scene       |
-| `addComponent`     | Attach a component to an existing GameObject                  |
-| `createScript`     | Generate a C# script from a template and optionally attach it |
-| `setProperty`      | Move, rotate, scale, rename, or toggle active state           |
-| `openScene`        | Open a scene by name or path                                  |
+```json
+{
+  "servers": {
+    "unity": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["<path-to>/unity-mcp.js"]
+    }
+  }
+}
+```
+
+### 3. Use with AI
+
+The AI will automatically discover all available tools via MCP `tools/list`. Just ask it to do things in Unity — it knows what tools are available.
+
+**Examples:**
+- "Create a Cube at position 0,3,0 with a Rigidbody"
+- "Find all GameObjects with Animator component"
+- "Add BoxCollider to the Player object"
+- "List all prefabs in the project"
+- "Create a prefab called Enemy from Models/zombie.fbx"
+- "Move the MainCamera to 0, 10, -5"
+
+## Available MCP Tools
+
+| Tool | Description |
+|---|---|
+| `unity_ping` | Check if Unity Editor bridge is alive |
+| `unity_refreshAssets` | Force Unity to re-import assets and recompile scripts |
+| `unity_createScene` | Create a new scene, optionally add to Build Settings |
+| `unity_openScene` | Open a scene by name or path |
+| `unity_saveScene` | Save the active scene to disk |
+| `unity_createGameObject` | Create a primitive or empty GameObject in the scene |
+| `unity_createPrefab` | Create a prefab asset from scratch or from a 3D model |
+| `unity_instantiatePrefab` | Place an existing prefab into the scene |
+| `unity_addComponent` | Add any component (built-in or custom script) to a GameObject |
+| `unity_setProperty` | Move, rotate, scale, rename, or toggle active state |
+| `unity_setMaterial` | Assign a material to a GameObject's Renderer |
+| `unity_setAnimatorController` | Assign an AnimatorController to a GameObject |
+| `unity_deleteGameObject` | Delete a GameObject from the scene (supports Undo) |
+| `unity_getSceneHierarchy` | List all root GameObjects in the active scene |
+| `unity_listAssets` | Search project assets by type and folder |
+| `unity_findGameObjects` | Search GameObjects by name, with optional component filter |
+
+### Workflow: Adding a Custom Script
+
+Since the AI can write files directly, the workflow for adding a custom script is:
+
+1. AI creates the `.cs` file in your Unity project's `Assets/` folder
+2. AI calls `unity_refreshAssets` to force Unity to compile
+3. AI calls `unity_addComponent` to attach the compiled script to a GameObject
+
+## VS Code Extension (Chat Participant)
+
+This project also includes a VS Code extension with a `@unity` chat participant for GitHub Copilot Chat.
+
+**Commands:**
+- `@unity /status` — Check connection to Unity Editor
+- `@unity /help` — Show available commands and examples
 
 ## Settings
 
@@ -68,19 +106,12 @@ MIT
 | `unity-copilot.bridgePort` | `6400` | WebSocket port the Unity bridge listens on |
 | `unity-copilot.autoConnect` | `true` | Auto-connect when the extension activates |
 
-## Architecture
-
-```
-VS Code (@unity chat)
-  └─ vscode.lm API  ──── parse intent → JSON command
-       └─ WebSocket (ws://127.0.0.1:6400)
-            └─ UnityBridgeServer.cs (TcpListener, background thread)
-                 └─ UnityCommandHandler.cs (main thread via EditorApplication.update)
-                      └─ UnityEditor API  (PrefabUtility, EditorSceneManager, …)
-```
-
 ## Requirements
 
-- VS Code 1.90+
-- GitHub Copilot extension (for chat participant & LM API)
 - Unity 2022.3+ (any LTS)
+- Node.js (for the MCP server)
+- VS Code 1.90+ (optional, for the chat participant extension)
+
+## License
+
+MIT

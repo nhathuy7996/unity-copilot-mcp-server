@@ -77,12 +77,17 @@ const V3 = {
 const TOOLS = [
   {
     name: 'unity_ping',
-    description: 'Ping Unity Editor bridge to verify the connection is alive.',
+    description: 'Ping Unity Editor bridge to verify the connection is alive. Call this first to check if Unity Editor is running and reachable.',
+    inputSchema: { type: 'object', properties: {}, required: [] },
+  },
+  {
+    name: 'unity_refreshAssets',
+    description: 'Force Unity Editor to re-import assets and recompile scripts (AssetDatabase.Refresh). Call this after creating or modifying C# script files externally so Unity detects and compiles them without needing to switch focus to the Editor window.',
     inputSchema: { type: 'object', properties: {}, required: [] },
   },
   {
     name: 'unity_createScene',
-    description: 'Create a new Unity scene file. Optionally add it to Build Settings.',
+    description: 'Create a new Unity scene (.unity) file in the project. Optionally add it to Build Settings for inclusion in builds.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -95,7 +100,7 @@ const TOOLS = [
   },
   {
     name: 'unity_openScene',
-    description: 'Open a Unity scene by name or path relative to Assets/.',
+    description: 'Open an existing Unity scene by name or path relative to Assets/. Supports single or additive mode.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -107,12 +112,12 @@ const TOOLS = [
   },
   {
     name: 'unity_saveScene',
-    description: 'Save the currently active scene to disk.',
+    description: 'Save the currently active scene to disk. Call after making changes to persist them.',
     inputSchema: { type: 'object', properties: {}, required: [] },
   },
   {
     name: 'unity_createGameObject',
-    description: 'Create a new GameObject in the active scene. Can be a primitive mesh, empty, or with specific components.',
+    description: 'Create a new GameObject in the active scene. Can be a primitive mesh (Cube, Sphere, Plane, etc.), an empty container, or include specific components like Rigidbody, Colliders, AudioSource etc. Supports setting parent, transform, and attaching multiple components at once.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -129,7 +134,7 @@ const TOOLS = [
   },
   {
     name: 'unity_createPrefab',
-    description: 'Create a Unity prefab asset, optionally from an existing FBX/GLB model file.',
+    description: 'Create a Unity prefab (.prefab) asset. Can create from scratch or from an existing FBX/GLB/OBJ model file. Supports adding components, tags, and layers. The prefab is saved to disk but NOT placed in the scene — use unity_instantiatePrefab to place it.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -145,7 +150,7 @@ const TOOLS = [
   },
   {
     name: 'unity_instantiatePrefab',
-    description: 'Instantiate an existing prefab asset into the active scene.',
+    description: 'Instantiate (place) an existing prefab asset into the active scene. Use this when you want to add a saved prefab into the scene hierarchy at a specific position, rotation, and scale. Maintains prefab link for overrides.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -161,7 +166,7 @@ const TOOLS = [
   },
   {
     name: 'unity_addComponent',
-    description: 'Add a Unity component to a GameObject in the active scene.',
+    description: 'Add a Unity component (built-in or custom script) to a GameObject in the active scene. Works with any compiled class in the project — built-in components like "Rigidbody", "BoxCollider", "AudioSource", "Camera", "Light", "NavMeshAgent", "Animator", "CharacterController", or any custom MonoBehaviour script already in the project such as "PlayerController", "EnemyAI", etc.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -173,7 +178,7 @@ const TOOLS = [
   },
   {
     name: 'unity_setProperty',
-    description: 'Update transform (position/rotation/scale), rename, or toggle active on a GameObject.',
+    description: 'Update transform properties (position, rotation, scale), rename, or toggle active/inactive on a GameObject in the active scene. Supports Undo in the Editor.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -188,22 +193,8 @@ const TOOLS = [
     },
   },
   {
-    name: 'unity_createScript',
-    description: 'Create a new C# MonoBehaviour (or other template) script in the Unity project.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        scriptName: { type: 'string', description: 'PascalCase class name, no .cs extension' },
-        template:   { type: 'string', enum: ['MonoBehaviour','ScriptableObject','Editor','Interface','Empty'] },
-        savePath:   { type: 'string', description: 'Folder relative to Assets/, default "Scripts"' },
-        attachTo:   { type: 'string', description: 'Attach to this GameObject after compilation' },
-      },
-      required: ['scriptName'],
-    },
-  },
-  {
     name: 'unity_setMaterial',
-    description: 'Assign a material asset to the Renderer of a GameObject.',
+    description: 'Assign a material (.mat) asset to the Renderer of a GameObject in the scene. The material must already exist in the project. Targets the first Renderer found on the object or its children.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -215,7 +206,7 @@ const TOOLS = [
   },
   {
     name: 'unity_setAnimatorController',
-    description: 'Assign an AnimatorController to a GameObject. Adds Animator component if one is not present.',
+    description: 'Assign an AnimatorController (.controller) asset to a GameObject. Automatically adds an Animator component if one is not already present on the object.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -227,7 +218,7 @@ const TOOLS = [
   },
   {
     name: 'unity_deleteGameObject',
-    description: 'Delete a GameObject from the active scene. Supports Undo in the Editor.',
+    description: 'Delete (destroy) a GameObject from the active scene by name. Supports Undo in the Unity Editor so it can be reversed with Ctrl+Z.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -238,12 +229,12 @@ const TOOLS = [
   },
   {
     name: 'unity_getSceneHierarchy',
-    description: 'Return all root GameObjects in the active scene with name, active state, and child count.',
+    description: 'Return all root GameObjects in the active scene with their name, active state, and child count. Use this to discover what objects exist in the scene before performing operations on them.',
     inputSchema: { type: 'object', properties: {}, required: [] },
   },
   {
     name: 'unity_listAssets',
-    description: 'Search Unity project assets by type and optional folder. Useful for discovering available prefabs, scenes, materials, etc.',
+    description: 'Search and list Unity project assets by type and optional folder. Use this to discover available prefabs, scenes, materials, scripts, textures, audio clips, animator controllers, and other assets before referencing them in other commands.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -251,6 +242,19 @@ const TOOLS = [
         assetType: { type: 'string', description: '"Prefab","Scene","Material","AnimatorController","AudioClip","Texture2D","Script"' },
       },
       required: [],
+    },
+  },
+  {
+    name: 'unity_findGameObjects',
+    description: 'Search for GameObjects in the active scene by name (supports partial/substring match). Returns matching objects with their full hierarchy path, active state, components list, and child count. Use this to locate objects before performing operations like addComponent, setProperty, setMaterial, etc.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query:         { type: 'string', description: 'Search string to match against GameObject names (case-insensitive, partial match)' },
+        hasComponent:  { type: 'string', description: 'Optional: only return objects that have this component, e.g. "Rigidbody", "Animator"' },
+        includeChildren: { type: 'boolean', description: 'If true, also search children recursively (default true)' },
+      },
+      required: ['query'],
     },
   },
 ];
@@ -266,12 +270,13 @@ const TOOL_ACTION = {
   unity_instantiatePrefab:     'instantiatePrefab',
   unity_addComponent:          'addComponent',
   unity_setProperty:           'setProperty',
-  unity_createScript:          'createScript',
   unity_setMaterial:           'setMaterial',
   unity_setAnimatorController: 'setAnimatorController',
   unity_deleteGameObject:      'deleteGameObject',
   unity_getSceneHierarchy:     'getSceneHierarchy',
   unity_listAssets:            'listAssets',
+  unity_findGameObjects:       'findGameObjects',
+  unity_refreshAssets:         'refreshAssets',
 };
 
 // ── MCP JSON-RPC 2.0 over stdio ───────────────────────────────────
