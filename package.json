@@ -2,7 +2,7 @@
   "name": "gdt-unity-mcp-server",
   "displayName": "GDT Unity MCP Server",
   "description": "Allows AI agent Chat to control Unity Editor — create prefabs, scenes, GameObjects, components, and scripts via natural language.",
-  "version": "0.1.11",
+  "version": "0.1.13",
   "publisher": "gamedevtoi",
   "engines": {
     "vscode": "^1.90.0"
